@@ -1,0 +1,62 @@
+version: "3.3"
+
+services:
+  backend: 
+    env_file:
+      - .env
+    environment:
+      - PORT=${BACKEND_PORT}
+      - MONGO_URL=${MONGO_URL}
+      - STEAM_API_KEY=${STEAM_API_KEY}
+      - STAVOX_API_KEY=${STAVOX_API_KEY}
+      - NODE_ENV=production
+    build:
+      context: ./backend-node
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: development
+        GITHUB_TOKEN: ${GITHUB_TOKEN}
+        PORT: ${BACKEND_PORT}
+    volumes: 
+      - /app/node_modules
+      - ./images:/app/images
+      - ./e2data:/app/e2data
+    depends_on: 
+      - mongo
+    networks:
+      - nginx-proxy # notice this
+    ports:
+      - 6000:3000
+
+  frontend: 
+    volumes: 
+      - /app/node_modules # for caching..
+      - ./build:/storage
+    env_file:
+      - .env
+    environment:
+      - REACT_API_URL=${API_URL}
+      - PORT=${FRONTEND_PORT}
+    build:
+      context: ./frontend-react
+      dockerfile: Dockerfile
+      args:
+        PORT: ${FRONTEND_PORT}
+
+  mongo:
+    env_file:
+      - .env
+    image: mongo
+    restart: always
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASS}
+    ports: 
+      - "6001:27017"
+    networks:
+      - nginx-proxy
+    volumes:
+      - ./mongodata:/data/db
+
+networks:
+  nginx-proxy:

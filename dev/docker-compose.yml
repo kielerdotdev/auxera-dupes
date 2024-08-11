@@ -1,0 +1,82 @@
+version: "3.3"
+
+services:
+  nginx: 
+    image: nginx:latest
+    container_name: nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ../backend-node/images:/app/images
+    ports: 
+      - 5000:80
+    depends_on:
+      - backend
+      - frontend
+    networks: 
+    - nginx-proxy # notice this
+    - default # notice this
+
+  backend: 
+    command: yarn dev
+    env_file:
+      - .env
+    environment:
+      - PORT=${BACKEND_PORT}
+      - MONGO_URL=${MONGO_URL}
+      - STEAM_API_KEY=${STEAM_API_KEY}
+      - STAVOX_API_KEY=${STAVOX_API_KEY}
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+    build:
+      context: ../backend-node
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: development
+        GITHUB_TOKEN: ${GITHUB_TOKEN}
+        PORT: ${BACKEND_PORT}
+    volumes: 
+      - ../backend-node/images:/app/images
+      - ../e2data:/app/e2data
+      - ../backend-node/src:/app/src
+      - ../backend-node/build:/app/build
+      - ../backend-node/tsoa.json:/app/tsoa.json
+      #- ../backend-node:/app
+
+    depends_on: 
+      - mongo
+    networks:
+      - nginx-proxy # notice this
+
+  frontend: 
+    command: yarn dev
+    volumes: 
+      - ../frontend-react/src:/app/src
+    env_file:
+      - .env
+    environment:
+      - REACT_API_URL=${API_URL}
+      - PORT=${FRONTEND_PORT}
+      - CHOKIDAR_USEPOLLING=true
+    build:
+      context: ../frontend-react
+      dockerfile: Dockerfile
+      args:
+        PORT: ${FRONTEND_PORT}
+
+  mongo:
+    env_file:
+      - .env
+    image: mongo
+    restart: always
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASS}
+    ports: 
+      - "27015:27017"
+    networks:
+      - nginx-proxy
+    logging:
+      driver: "none"
+
+networks:
+  nginx-proxy:

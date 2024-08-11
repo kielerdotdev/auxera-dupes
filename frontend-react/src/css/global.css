@@ -1,0 +1,13 @@
+.body::-webkit-scrollbar {
+	display: none;
+}
+
+.body::-moz-scrollbar {
+	display: none;
+}
+
+.body {
+	overflow: auto;
+	-ms-overflow-style: none;
+	scrollbar-color: transparent transparent; /*just hides the scrollbar for firefox */
+}
